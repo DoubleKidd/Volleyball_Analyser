@@ -6,19 +6,13 @@ import copy
 # Perhaps also the cernteer line verticies
 def detect_court(frame):
     lines = get_lines(frame)
-    
-    # if lines is not None:
-    #     for line in lines:
-    #         x1, y1, x2, y2 = line[0]
-    #         cv2.line(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
     intersections = get_intersections(lines, frame)
-    # if intersections is not None:
-    #     # Colour the intersections
-    #     for intersection in intersections:
-    #         cv2.circle(frame, intersection, 5, (255, 0, 0), -1)
+
+    # corners = detect_corners_ShiTomasi(frame)
+    # corners = detect_corners_harris(frame)
     
-    return (lines, intersections)
+    return intersections, lines
 
 def get_lines(frame):
     # Step 2.1: Convert to grayscale
@@ -42,10 +36,10 @@ def get_intersections(lines, frame):
 
         # Remove impossible intersections (off screen)
         # Should remove/change this to allow for court coners which are outside of the recording?
-        for intersection in intersections:
-            x, y = intersection
-            if x > width or y > height:
-                intersections.remove(intersection)
+        # for intersection in intersections:
+        #     x, y = intersection
+        #     if x > width or y > height:
+        #         intersections.remove(intersection)
 
         # This method below works to minimise the list, however can end up picking up the wrong intexceptions, perhaps a combinations of this an FAST could be used to be more accurate?
         # use intersections then fast corner and check if there is an intersection in the fast area as well
@@ -125,3 +119,40 @@ def remove_intersections_less_than_threshold_amount_in_area(intersections, area_
             for i in range(len(indexes_to_remove)-1, 0, -1):
                 intersections.pop(indexes_to_remove[i])
     return new_intersections
+
+#This method doesn't work nearly as well as my previous method
+def detect_corners_ShiTomasi(frame):
+    # Convert frame to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Detect corners using Shi-Tomasi algorithm
+    corners = cv2.goodFeaturesToTrack(gray, maxCorners=100, qualityLevel=0.01, minDistance=10)
+
+    # Convert corners to integers
+    corners = np.int0(corners)
+
+    # Draw corners on the frame
+    for corner in corners:
+        x, y = corner.ravel()
+        cv2.circle(frame, (x, y), 5, (255, 0, 0), -1)
+
+    return corners
+
+#This method doesn't work nearly as well as my previous method
+def detect_corners_harris(frame):
+    # Convert frame to grayscale
+    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+
+    # Detect corners using Harris Corner Detection
+    corners = cv2.cornerHarris(gray, blockSize=2, ksize=3, k=0.04)
+
+    # Threshold for an optimal value, it may vary depending on the image and lighting conditions
+    corners_thresh = 0.01 * corners.max()
+
+    # Draw circles on the original frame for the detected corners
+    for y in range(corners.shape[0]):
+        for x in range(corners.shape[1]):
+            if corners[y, x] > corners_thresh:
+                cv2.circle(frame, (x, y), 5, (255, 0, 0), -1)  # Draw blue circle
+
+    return corners
